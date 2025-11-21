@@ -4,6 +4,8 @@ import time
 
 import pika
 from pika.credentials import PlainCredentials
+from storage import download_video_file
+
 
 from logger_config import logger
 
@@ -58,20 +60,29 @@ def handle_message(ch, method, properties, body: bytes):
     try:
         payload = json.loads(body.decode("utf-8"))
         video_id = payload.get("video_id")
+        bucket = payload.get("bucket")
+        object_name = payload.get("object_name")
 
         logger.info(
             "Received video.uploaded event",
             extra={"video_id": video_id},
         )
 
-        # TODO: In the next step we will:
-        #  - download the video from MinIO
-        #  - extract audio using ffmpeg
-        #  - upload audio file back to MinIO
+        if not bucket or not object_name:
+            logger.error(
+                "Missing bucket or object_name in event payload",
+                extra={"video_id": video_id},
+            )
+        else:
+            download_video_file(
+                bucket=bucket,
+                object_name=object_name,
+                video_id=video_id,
+            )
+
     except Exception as exc:
         logger.exception(f"Failed to process message: {exc}")
     finally:
-        # Always acknowledge the message so it will not be re-delivered
         ch.basic_ack(delivery_tag=method.delivery_tag)
 
 

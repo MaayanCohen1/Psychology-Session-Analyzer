@@ -4,7 +4,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException, status
 
 from logger_config import logger
 from storage import upload_video_file
-from events import publish_video_uploaded_event  # <--- new
+from events import publish_video_uploaded_event
 
 app = FastAPI(title="Upload Service")
 
@@ -46,7 +46,6 @@ async def upload_video(file: UploadFile = File(...)):
             content_type=file.content_type or "application/octet-stream",
         )
 
-        # Publish event to RabbitMQ
         publish_video_uploaded_event(
             video_id=video_id,
             bucket=bucket,

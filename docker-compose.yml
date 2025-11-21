@@ -78,7 +78,7 @@ services:
       RABBITMQ_PORT: "5672"
       RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-
+      RABBITMQ_EXCHANGE: "video.events"
 
 
 volumes:

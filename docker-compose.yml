@@ -7,22 +7,20 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    env_file:
+      - .env
 
   minio:
     image: minio/minio
     container_name: minio
     command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
-      - "9000:9000"  # API
-      - "9001:9001"  # UI
+      - "9000:9000"
+      - "9001:9001"
     volumes:
       - minio-data:/data
+    env_file:
+      - .env
 
   redis:
     image: redis:7
@@ -33,15 +31,13 @@ services:
   postgres:
     image: postgres:15
     container_name: postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
-  
+    env_file:
+      - .env
+
   upload-service:
     build:
       context: ./services/upload_service
@@ -52,19 +48,8 @@ services:
     depends_on:
       - rabbitmq
       - minio
-      - postgres
-      - redis
-    environment:
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      MINIO_SECURE: "false"
-      RABBITMQ_HOST: "rabbitmq"
-      RABBITMQ_PORT: "5672"
-      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-      RABBITMQ_EXCHANGE: "video.events"
+    env_file:
+      - .env
 
   audio-service:
     build:
@@ -74,18 +59,8 @@ services:
     depends_on:
       - rabbitmq
       - minio
-    environment:
-      RABBITMQ_HOST: "rabbitmq"
-      RABBITMQ_PORT: "5672"
-      RABBITMQ_USER: ${RABBITMQ_DEFAULT_USER}
-      RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS}
-      RABBITMQ_EXCHANGE: "video.events"
-      MINIO_ENDPOINT: "minio:9000"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
-      MINIO_BUCKET: ${MINIO_BUCKET}
-      MINIO_SECURE: "false"
-
+    env_file:
+      - .env
 
 volumes:
   minio-data:

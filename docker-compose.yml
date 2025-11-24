@@ -88,6 +88,20 @@ services:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
 
+  query-service:
+    build:
+      context: ./services/query_service
+      dockerfile: Dockerfile
+    container_name: query-service
+    ports:
+      - "8001:8001"  # Port 8001 exposed to host
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+
 volumes:
   minio-data:
   postgres-data:

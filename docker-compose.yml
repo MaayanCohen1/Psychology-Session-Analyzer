@@ -62,6 +62,17 @@ services:
     env_file:
       - .env
 
+  transcription-service:
+    build:
+      context: ./services/transcription_service
+      dockerfile: Dockerfile
+    container_name: transcription-service
+    depends_on:
+      - rabbitmq
+      - minio
+    env_file:
+      - .env
+
 volumes:
   minio-data:
   postgres-data:

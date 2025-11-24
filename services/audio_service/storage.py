@@ -24,7 +24,7 @@ def get_minio_client() -> Minio:
     Create and return a MinIO client instance.
     """
     client = Minio(
-        MINIO_ENDPOINT,
+        endpoint=MINIO_ENDPOINT,
         access_key=MINIO_ACCESS_KEY,
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE,

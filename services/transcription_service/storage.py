@@ -14,7 +14,7 @@ def get_minio_client():
     Initialize MinIO client.
     """
     return Minio(
-        MINIO_ENDPOINT,
+        endpoint=MINIO_ENDPOINT,
         access_key=MINIO_ACCESS_KEY,
         secret_key=MINIO_SECRET_KEY,
         secure=MINIO_SECURE,
@@ -36,7 +36,7 @@ def download_file(bucket_name: str, object_name: str, local_path: str) -> bool:
         client.fget_object(
             bucket_name=bucket_name,
             object_name=object_name,
-            file_path=local_path,
+            file_path=str(local_path),
         )
 
         logger.info(f"Download successful: {local_path}")

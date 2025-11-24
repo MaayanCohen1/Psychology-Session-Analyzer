@@ -14,7 +14,7 @@ MINIO_BUCKET = os.getenv("MINIO_BUCKET", "therapy-videos")
 MINIO_SECURE = os.getenv("MINIO_SECURE", "false").lower() == "true"
 
 minio_client = Minio(
-    MINIO_ENDPOINT,
+    endpoint=MINIO_ENDPOINT,
     access_key=MINIO_ACCESS_KEY,
     secret_key=MINIO_SECRET_KEY,
     secure=MINIO_SECURE,
@@ -26,9 +26,9 @@ def ensure_bucket_exists() -> None:
     Ensure that the target bucket exists in MinIO.
     """
     try:
-        if not minio_client.bucket_exists(MINIO_BUCKET):
+        if not minio_client.bucket_exists(bucket_name=MINIO_BUCKET):
             logger.info(f"Bucket '{MINIO_BUCKET}' does not exist. Creating it.")
-            minio_client.make_bucket(MINIO_BUCKET)
+            minio_client.make_bucket(bucket_name=MINIO_BUCKET)
     except S3Error as exc:
         logger.exception(f"Failed to ensure bucket exists: {exc}")
         raise
@@ -37,7 +37,6 @@ def ensure_bucket_exists() -> None:
 def upload_video_file(data: bytes, object_name: str, content_type: str) -> Tuple[str, str]:
     """
     Upload a video file to MinIO.
-
     Returns a tuple of (bucket_name, object_name).
     """
     ensure_bucket_exists()

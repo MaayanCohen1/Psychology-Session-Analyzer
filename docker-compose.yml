@@ -72,6 +72,21 @@ services:
       - minio
     env_file:
       - .env
+  
+  analysis-service:
+    build:
+      context: ./services/analysis_service
+      dockerfile: Dockerfile
+    container_name: analysis-service
+    depends_on:
+      - rabbitmq
+      - postgres
+      - redis
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: postgres
+      REDIS_HOST: redis
 
 volumes:
   minio-data:

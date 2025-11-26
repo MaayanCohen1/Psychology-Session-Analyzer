@@ -87,6 +87,8 @@ services:
     environment:
       POSTGRES_HOST: postgres
       REDIS_HOST: redis
+    labels:
+      com.datadoghq.ad.logs: '[{"source": "python", "service": "analysis-service"}]'
 
   query-service:
     build:
@@ -101,6 +103,21 @@ services:
       - .env
     environment:
       POSTGRES_HOST: postgres
+
+  datadog-agent:
+    image: gcr.io/datadoghq/agent:7
+    container_name: datadog-agent
+    environment:
+      - DD_API_KEY=${DD_API_KEY}
+      - DD_SITE=${DD_SITE}
+      - DD_LOGS_ENABLED=true
+      - DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL=true
+      - DD_PROCESS_AGENT_ENABLED=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    env_file:
+      - .env
 
 volumes:
   minio-data:

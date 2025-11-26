@@ -3,42 +3,57 @@ import json
 from openai import OpenAI
 from logger_config import logger
 
-# Initialize OpenAI Client explicitly
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def analyze_transcript(utterances: list) -> dict:
-    """
-    Sends the transcript to OpenAI (GPT-4o-mini) for psychological analysis.
-    """
-    
-    # 1. Format input
     formatted_transcript = ""
     for item in utterances:
         formatted_transcript += f"Speaker {item['speaker']}: {item['text']}\n"
 
-    # 2. Define the System Prompt
     system_instruction = """
-    You are an expert psychotherapist and data analyst.
-    Your task is to analyze a transcript of a therapy session.
+    You are an expert clinical psychologist and data analyst specialized in Trauma and CBT.
+    Analyze the following therapy session transcript.
 
-    Please perform the following tasks:
-    1. Identify Roles: Determine who is the 'Therapist' and who is the 'Patient'.
-    2. Analyze Utterances: For each sentence, identify the primary 'emotion' and the main 'topic'.
-    3. Clinical Insights: Based on the topics that triggered negative or positive emotions, provide a list of 2-3 recommendations for the therapist for the next session.
+    Perform these specific tasks:
+    
+    1. **Identify Roles**: Who is 'Therapist' and who is 'Patient'?
+    
+    2. **Trauma & PTSD Indicators**: Scan the text for specific markers of PTSD based on DSM-5 criteria:
+       - Intrusive thoughts/Flashbacks
+       - Avoidance of triggers
+       - Negative alterations in cognition/mood
+       - Hyperarousal/Reactivity
+       If found, list them. If not, return an empty list.
+    
+    3. **Risk Assessment**: Check for self-harm or suicide risk. Return boolean.
+    
+    4. **Cognitive Distortions**: Identify CBT distortions (e.g., Catastrophizing, Black-and-white thinking).
+    
+    5. **Clinical Recommendations**: Provide 3 actionable recommendations for the therapist.
 
-    You MUST output the result in valid JSON format with the following structure:
+    6. **Sentence Analysis**: Emotion, Sentiment (-1 to 1), and Topic for each sentence.
+
+    Output MUST be valid JSON:
     {
         "roles": {"therapist": "Speaker X", "patient": "Speaker Y"},
-        "summary": "Brief summary of the session content.",
-        "clinical_recommendations": [
-            "Recommendation 1...",
-            "Recommendation 2..."
-        ],
+        "summary": "Brief session summary...",
+        "ptsd_analysis": {
+            "is_trauma_related": true,
+            "detected_symptoms": ["Avoidance", "Hyperarousal"],
+            "notes": "Patient refuses to discuss the accident details."
+        },
+        "risk_assessment": {
+            "has_risk": false,
+            "details": "..."
+        },
+        "cognitive_distortions": ["Catastrophizing"],
+        "clinical_recommendations": ["...", "..."],
         "analysis": [
             {
                 "speaker": "Speaker X",
                 "text": "...",
                 "emotion": "...",
+                "sentiment_score": -0.5,
                 "topic": "..."
             }
         ]
@@ -46,13 +61,13 @@ def analyze_transcript(utterances: list) -> dict:
     """
 
     try:
-        logger.info("Sending transcript to OpenAI for analysis...")
+        logger.info("Sending trauma-informed transcript to OpenAI...")
 
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
                 {"role": "system", "content": system_instruction},
-                {"role": "user", "content": f"Here is the transcript:\n{formatted_transcript}"}
+                {"role": "user", "content": f"Transcript:\n{formatted_transcript}"}
             ],
             response_format={"type": "json_object"},
             temperature=0.7
@@ -61,7 +76,7 @@ def analyze_transcript(utterances: list) -> dict:
         content = response.choices[0].message.content
         result = json.loads(content)
         
-        logger.info("Successfully received analysis from OpenAI.")
+        logger.info("Successfully received analysis.")
         return result
 
     except Exception as e:

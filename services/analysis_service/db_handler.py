@@ -71,7 +71,6 @@ def save_analysis_result(video_id: str, analysis_data: dict):
         conn = get_db_connection()
         cur = conn.cursor()
         
-        # Psycopg2 automatically adapts dict to JSONB if we dump it or use Json wrapper
         cur.execute(query, (video_id, json.dumps(analysis_data)))
         
         conn.commit()

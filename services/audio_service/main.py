@@ -8,18 +8,15 @@ import pika.exceptions
 from storage import download_video_file, upload_audio_file
 from extractor import extract_audio
 
-# Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("audio_service")
 
-# Load configuration from environment variables
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST")
 RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", 5672))
 RABBITMQ_USER = os.getenv("RABBITMQ_DEFAULT_USER")
 RABBITMQ_PASSWORD = os.getenv("RABBITMQ_DEFAULT_PASS")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET")
 
-# Queue names
 INPUT_QUEUE = os.getenv("QUEUE_VIDEO_PROCESSING", "video_processing_queue")
 OUTPUT_QUEUE = os.getenv("QUEUE_AUDIO_PROCESSING", "audio_processing_queue")
 
@@ -47,9 +44,6 @@ def send_audio_ready_event(channel, video_id: str, audio_object_name: str):
     )
 
 def process_message(ch, method, properties, body):
-    """
-    Callback function to process incoming messages.
-    """
     try:
         data = json.loads(body)
         video_id = data.get("video_id")
@@ -58,14 +52,12 @@ def process_message(ch, method, properties, body):
 
         logger.info(f"Processing video: {video_id}")
 
-        # 1. Download video
         local_video_path = download_video_file(bucket, object_name, video_id)
         if not local_video_path:
             logger.error("Failed to download video, skipping.")
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # 2. Extract audio
         local_audio_path = f"/tmp/audio_service/audio/{video_id}.mp3"
         extraction_success = extract_audio(local_video_path, local_audio_path)
         
@@ -74,17 +66,14 @@ def process_message(ch, method, properties, body):
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # 3. Upload audio
         audio_object_name = f"processed-audio/{video_id}.mp3"
         upload_success = upload_audio_file(MINIO_BUCKET, local_audio_path, audio_object_name)
 
         if upload_success:
-            # 4. Notify next service
             send_audio_ready_event(ch, video_id, audio_object_name)
         
         ch.basic_ack(delivery_tag=method.delivery_tag)
         
-        # Cleanup
         if os.path.exists(local_video_path):
             os.remove(local_video_path)
         if os.path.exists(local_audio_path):

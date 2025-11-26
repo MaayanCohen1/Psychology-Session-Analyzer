@@ -5,12 +5,10 @@ import pika
 import pika.exceptions
 from pathlib import Path
 
-# Import our helper modules
 from storage import download_file
 from assembly_client import AssemblyAIClient
 from logger_config import logger
 
-# --- Configuration ---
 RABBITMQ_HOST = os.getenv("RABBITMQ_HOST")
 RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", 5672))
 RABBITMQ_USER = os.getenv("RABBITMQ_DEFAULT_USER")
@@ -19,21 +17,13 @@ RABBITMQ_PASSWORD = os.getenv("RABBITMQ_DEFAULT_PASS")
 MINIO_BUCKET = os.getenv("MINIO_BUCKET")
 ASSEMBLYAI_API_KEY = os.getenv("ASSEMBLYAI_API_KEY")
 
-# Queues
-# Input: We listen to the queue where Audio Service sends messages
 INPUT_QUEUE = os.getenv("QUEUE_AUDIO_PROCESSING", "audio_processing_queue")
-# Output: We send results to the queue for the Analysis Service (LLM)
 OUTPUT_QUEUE = "analysis_processing_queue"
 
-# Temp directory for downloads
 DOWNLOAD_DIR = Path("/tmp/transcription")
 
 
 def send_to_analysis(channel, video_id, transcript_text, utterances):
-    """
-    Publishes the transcription result to the next queue.
-    The payload includes the full text and the speaker segments.
-    """
     payload = {
         "video_id": video_id,
         "transcript_text": transcript_text,
@@ -52,21 +42,16 @@ def send_to_analysis(channel, video_id, transcript_text, utterances):
 
 
 def process_message(ch, method, properties, body):
-    """
-    Callback function to handle incoming messages.
-    """
     local_file_path = None
     
     try:
         data = json.loads(body)
         video_id = data.get("video_id")
         bucket = data.get("bucket")
-        audio_object_name = data.get("audio_object_name") # The MP3 file
+        audio_object_name = data.get("audio_object_name")
 
         logger.info(f"Processing transcription task for: {video_id}")
 
-        # 1. Download MP3 from MinIO
-        # Ensure directory exists
         DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
         local_file_path = DOWNLOAD_DIR / f"{video_id}.mp3"
         
@@ -76,32 +61,24 @@ def process_message(ch, method, properties, body):
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
 
-        # 2. Transcribe using AssemblyAI
         client = AssemblyAIClient(ASSEMBLYAI_API_KEY)
         
-        # A. Upload
         upload_url = client.upload_file(str(local_file_path))
         
-        # B. Start Transcription
         transcript_id = client.transcribe(upload_url)
         
-        # C. Wait for Result
         text, utterances = client.get_result(transcript_id)
 
-        # 3. Send to Next Step (Analysis)
         send_to_analysis(ch, video_id, text, utterances)
 
-        # 4. Acknowledge message
         ch.basic_ack(delivery_tag=method.delivery_tag)
         logger.info(f"Task completed for {video_id}")
 
     except Exception as e:
         logger.exception(f"Error processing message: {e}")
-        # In a real scenario, we might want to Nack or use a Dead Letter Queue
         ch.basic_ack(delivery_tag=method.delivery_tag)
         
     finally:
-        # Cleanup: Remove local file
         if local_file_path and local_file_path.exists():
             try:
                 os.remove(local_file_path)
